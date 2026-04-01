@@ -12,7 +12,7 @@ app = FastAPI(title="Log Anomaly Detector", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://log-anomaly-detector.vercel.app"],
+    allow_origins=["http://localhost:5173", "https://log-anomaly-detector-five.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
