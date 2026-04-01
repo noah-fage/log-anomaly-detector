@@ -1,81 +1,81 @@
-# Sentinel — AI-Powered Log Anomaly Detector
+# Sentinel - Log Anomaly Detector
 
-A SOC-style security dashboard that analyzes raw server logs for threats using Claude Opus 4.6. Detects attack patterns, maps them to MITRE ATT&CK tactics, and generates professional PDF reports.
+A cybersecurity dashboard that takes raw server and auth logs and uses Claude Opus 4.6 to find threats. It doesn't just grep for keywords - it reads the log timeline like an analyst would, connects the dots between events, and tells you what actually happened and why it's suspicious.
 
-## Demo
+Built this because most "security projects" on GitHub are either toy examples or just wrappers around existing tools. I wanted something that demonstrates real threat hunting logic.
 
-Load the sample attack chain to see a full kill chain detected:
-**Brute Force → Privilege Escalation → Payload Download → Lateral Movement → Exfiltration → Persistence → Log Tampering**
+## What it looks like in action
+
+Drop in the sample attack chain log and you'll see it catch a full intrusion sequence from start to finish:
+
+brute force SSH login attempts → credential hit on a low-priv user → sudo to root → wget payload from a sketchy IP → lateral movement to internal hosts → /etc/shadow dump → base64 encode + curl exfil → hidden cron job for persistence → auth.log deleted to cover tracks
+
+Each finding comes with the MITRE ATT&CK tactic it maps to, the specific log lines used as evidence, and an explanation of why the behavior is suspicious in context. Then drop in the normal activity log and it comes back clean. That contrast is the whole point.
 
 ## Features
 
-- **AI-powered detection** — Claude Opus 4.6 with adaptive thinking reasons through log timelines, not just keyword matching
-- **MITRE ATT&CK mapping** — every finding tagged with the relevant tactic
-- **Risk scoring** — 0–100 overall risk gauge per analysis
-- **Multi-file analysis** — drag and drop multiple log files, analyze individually or all together
-- **PDF & JSON export** — download professional SOC reports
-- **Dark SOC dashboard** — severity-tiered threat cards with expandable evidence
+- Paste logs or drag and drop `.log` / `.txt` files directly onto the dashboard
+- Upload multiple files at once and analyze them individually or all together as one combined analysis
+- Every detected threat is tagged with a MITRE ATT&CK tactic (Credential Access, Lateral Movement, Exfiltration, etc.)
+- Risk score from 0 to 100 so you can see overall severity at a glance
+- Expandable threat cards with the exact evidence lines pulled from your logs
+- Export the full report as a PDF or JSON
 
-## Tech Stack
+## Tech stack
 
-| Layer | Tech |
-|---|---|
-| Frontend | React + TypeScript + Vite |
-| Backend | Python + FastAPI |
-| AI | Claude Opus 4.6 (Anthropic API) |
-| PDF Export | jsPDF |
+- React + TypeScript + Vite on the frontend
+- Python + FastAPI on the backend
+- Claude Opus 4.6 via the Anthropic API for the actual analysis
+- Adaptive thinking enabled so Claude reasons through the log timeline before responding, not just pattern matching
+- jsPDF for the report export
 
-## Getting Started
+## Running it locally
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- An [Anthropic API key](https://console.anthropic.com)
+You'll need Python 3.10+, Node.js 18+, and an Anthropic API key from [console.anthropic.com](https://console.anthropic.com).
 
-### Backend
-
+**Backend:**
 ```bash
 cd backend
 cp .env.example .env
-# Add your API key to .env
+# paste your Anthropic API key into .env
 pip install -r requirements.txt
 python -m uvicorn main:app --reload
 ```
 
-### Frontend
-
+**Frontend:**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`
+Then open `http://localhost:5173`.
 
-## What It Detects
+## What it can detect
 
-- Brute force / credential stuffing
-- Privilege escalation (sudo, su, wheel)
-- Lateral movement (SSH pivoting)
-- Persistence (cron jobs, SSH key injection)
-- Data exfiltration (shadow file reads, base64 encoding, outbound POST)
-- C2 beacon indicators
-- Defense evasion (log deletion, tampering)
-- Off-hours activity and impossible logins
+- Brute force and credential stuffing attacks
+- Privilege escalation via sudo, su, or wheel group changes
+- Lateral movement through SSH pivoting between internal hosts
+- Persistence mechanisms like cron jobs in temp directories or SSH key injection
+- Data exfiltration (shadow file reads, base64 encoding, suspicious outbound POST requests)
+- Command and control beacon patterns
+- Defense evasion like log file deletion or tampering
+- Off-hours logins and impossible travel (same user, multiple source IPs at once)
+- Suspicious command execution like downloading and chmod-ing files from unknown IPs
 
-## Project Structure
+## Project structure
 
 ```
 log-anomaly-detector/
 ├── backend/
-│   ├── main.py          # FastAPI app
-│   ├── analyzer.py      # Claude API integration + structured output
+│   ├── main.py          # FastAPI app and routing
+│   ├── analyzer.py      # Claude API call + JSON schema enforcement
 │   └── requirements.txt
 ├── frontend/
 │   └── src/
-│       ├── App.tsx      # SOC dashboard UI
-│       └── types.ts
+│       ├── App.tsx      # Dashboard UI
+│       └── types.ts     # TypeScript types
 └── sample-logs/
-    ├── attack-chain.log    # Full intrusion scenario
-    └── normal-activity.log # Clean baseline
+    ├── attack-chain.log    # Full intrusion scenario to test with
+    └── normal-activity.log # Clean baseline logs
 ```
