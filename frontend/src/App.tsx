@@ -327,7 +327,7 @@ export default function App() {
     setLoadingIds(prev => new Set(prev).add(id));
     setErrors(prev => { const r = { ...prev }; delete r[id]; return r; });
     try {
-      const res = await fetch("http://localhost:8000/analyze", {
+      const res = await fetch("https://log-anomaly-detector.onrender.com/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ log_text: content }),
