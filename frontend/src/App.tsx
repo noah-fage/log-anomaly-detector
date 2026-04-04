@@ -487,7 +487,7 @@ export default function App() {
           <span className="header-sub">Log Anomaly Detector</span>
         </div>
         <div className="header-right">
-          <span className="powered-by">Powered by Claude Opus 4.6</span>
+          <span className="powered-by">Powered by Claude Sonnet 4.6</span>
         </div>
       </header>
 

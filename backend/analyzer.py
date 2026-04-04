@@ -92,9 +92,8 @@ async def analyze_logs(log_text: str, api_key: str) -> dict:
     client = anthropic.Anthropic(api_key=api_key)
 
     response = client.messages.create(
-        model="claude-opus-4-6",
-        max_tokens=8000,
-        thinking={"type": "enabled", "budget_tokens": 5000},
+        model="claude-sonnet-4-6",
+        max_tokens=4000,
         system=SYSTEM_PROMPT,
         messages=[
             {
