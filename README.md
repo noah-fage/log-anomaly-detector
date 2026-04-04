@@ -9,21 +9,21 @@
 ---
 
 <!-- Replace this line with your demo GIF once recorded -->
-> **Demo:** Drop in a log file at [sentinel-anomaly.vercel.app](https://sentinel-anomaly.vercel.app) — try the "Load Sample Attack Chain" button to see a full intrusion sequence analyzed end to end.
+> **Demo:** Drop in a log file at [sentinel-anomaly.vercel.app](https://sentinel-anomaly.vercel.app). Try the "Load Sample Attack Chain" button to see a full intrusion sequence analyzed end to end.
 
 ---
 
 ## What it does
 
-Sentinel reads raw server and auth logs the way a senior SOC analyst would — tracing the attack timeline, connecting events across the log, and mapping findings to the MITRE ATT&CK framework. It doesn't grep for keywords.
+Sentinel reads raw server and auth logs the way a senior SOC analyst would: tracing the attack timeline, connecting events across the log, and mapping findings to the MITRE ATT&CK framework. It doesn't grep for keywords.
 
 Drop in a log file and it returns:
 
 - Every detected anomaly with severity, MITRE ATT&CK tactic, affected user, source IP, time window, and the exact evidence lines from your logs
-- An overall risk score from 0–100
+- An overall risk score from 0-100
 - A "What Happens Next" prediction: the attacker's 3 most likely next moves based on kill chain progression, each with a likelihood score, specific indicators to watch for, and an immediately actionable countermeasure
 
-Everything runs in a single Claude Opus 4.6 call with structured JSON output — analysis and prediction come back together, no second round trip.
+Everything runs in a single Claude Opus 4.6 call with structured JSON output. Analysis and prediction come back together, no second round trip.
 
 ## Demo
 
@@ -31,26 +31,26 @@ Drop in the included `sample-logs/attack-chain.log` and it catches the full intr
 
 ```
 brute force SSH (8 failed attempts, 3 usernames)
-  → credential hit on sysadmin
-  → sudo to root
-  → wget payload from 185.220.101.45 into /tmp
-  → chmod +x + execute
-  → SSH lateral movement to 192.168.1.55 and .60
-  → cat /etc/shadow | base64 > /tmp/out.b64
-  → curl POST to C2 server
-  → cron persistence in /etc/crontab
-  → rm -f /var/log/auth.log  (log tampering)
+  -> credential hit on sysadmin
+  -> sudo to root
+  -> wget payload from 185.220.101.45 into /tmp
+  -> chmod +x + execute
+  -> SSH lateral movement to 192.168.1.55 and .60
+  -> cat /etc/shadow | base64 > /tmp/out.b64
+  -> curl POST to C2 server
+  -> cron persistence in /etc/crontab
+  -> rm -f /var/log/auth.log  (log tampering)
 ```
 
-Then drop in `sample-logs/normal-activity.log` — it comes back clean.
+Then drop in `sample-logs/normal-activity.log` and it comes back clean.
 
 ## Features
 
 - Drag and drop `.log` / `.txt` files or paste logs directly
-- Multi-file support — analyze files individually or combine them into one analysis
+- Multi-file support: analyze files individually or combine them into one analysis
 - MITRE ATT&CK tactic mapping on every finding
 - Expandable threat cards with raw evidence lines
-- "What Happens Next" panel — 3 predicted next attacker moves with likelihood bars, watch indicators, and countermeasures
+- "What Happens Next" panel: 3 predicted next attacker moves with likelihood bars, watch indicators, and countermeasures
 - Export full report as PDF or JSON
 - Dark SOC-style dashboard UI
 
@@ -58,19 +58,19 @@ Then drop in `sample-logs/normal-activity.log` — it comes back clean.
 
 ```
 User drops log file
-       ↓
+       |
 FastAPI backend receives log_text
-       ↓
+       |
 Claude Opus 4.6 (extended thinking, 5k token budget)
   - Reads full log timeline in context
   - Identifies anomalies, maps to MITRE ATT&CK
   - Predicts next 3 attacker moves via kill chain progression
   - Returns structured JSON enforced by output schema
-       ↓
+       |
 Frontend renders risk gauge, anomaly cards, prediction panel
 ```
 
-The Claude call uses `output_config` with a strict JSON schema so the response is always structured — no parsing heuristics, no prompt-engineered delimiters.
+The Claude call uses `output_config` with a strict JSON schema so the response is always structured. No parsing heuristics, no prompt-engineered delimiters.
 
 ## Tech stack
 
