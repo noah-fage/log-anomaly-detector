@@ -1,81 +1,136 @@
-# Sentinel - Log Anomaly Detector
+# Sentinel
 
-A cybersecurity dashboard that takes raw server and auth logs and uses Claude Opus 4.6 to find threats. It doesn't just grep for keywords - it reads the log timeline like an analyst would, connects the dots between events, and tells you what actually happened and why it's suspicious.
+**AI-powered SOC dashboard that detects threats in server logs and predicts what the attacker does next.**
 
-Built this because most "security projects" on GitHub are either toy examples or just wrappers around existing tools. I wanted something that demonstrates real threat hunting logic.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-sentinel--anomaly.vercel.app-00d4ff?style=flat-square)](https://sentinel-anomaly.vercel.app)
+[![Backend](https://img.shields.io/badge/Backend-Render-46e3b7?style=flat-square)](https://log-anomaly-detector.onrender.com/health)
+[![Claude](https://img.shields.io/badge/Powered%20by-Claude%20Opus%204.6-cc785c?style=flat-square)](https://anthropic.com)
 
-## What it looks like in action
+---
 
-Drop in the sample attack chain log and you'll see it catch a full intrusion sequence from start to finish:
+<!-- Replace this line with your demo GIF once recorded -->
+> **Demo:** Drop in a log file at [sentinel-anomaly.vercel.app](https://sentinel-anomaly.vercel.app) — try the "Load Sample Attack Chain" button to see a full intrusion sequence analyzed end to end.
 
-brute force SSH login attempts → credential hit on a low-priv user → sudo to root → wget payload from a sketchy IP → lateral movement to internal hosts → /etc/shadow dump → base64 encode + curl exfil → hidden cron job for persistence → auth.log deleted to cover tracks
+---
 
-Each finding comes with the MITRE ATT&CK tactic it maps to, the specific log lines used as evidence, and an explanation of why the behavior is suspicious in context. Then drop in the normal activity log and it comes back clean. That contrast is the whole point.
+## What it does
+
+Sentinel reads raw server and auth logs the way a senior SOC analyst would — tracing the attack timeline, connecting events across the log, and mapping findings to the MITRE ATT&CK framework. It doesn't grep for keywords.
+
+Drop in a log file and it returns:
+
+- Every detected anomaly with severity, MITRE ATT&CK tactic, affected user, source IP, time window, and the exact evidence lines from your logs
+- An overall risk score from 0–100
+- A "What Happens Next" prediction: the attacker's 3 most likely next moves based on kill chain progression, each with a likelihood score, specific indicators to watch for, and an immediately actionable countermeasure
+
+Everything runs in a single Claude Opus 4.6 call with structured JSON output — analysis and prediction come back together, no second round trip.
+
+## Demo
+
+Drop in the included `sample-logs/attack-chain.log` and it catches the full intrusion sequence:
+
+```
+brute force SSH (8 failed attempts, 3 usernames)
+  → credential hit on sysadmin
+  → sudo to root
+  → wget payload from 185.220.101.45 into /tmp
+  → chmod +x + execute
+  → SSH lateral movement to 192.168.1.55 and .60
+  → cat /etc/shadow | base64 > /tmp/out.b64
+  → curl POST to C2 server
+  → cron persistence in /etc/crontab
+  → rm -f /var/log/auth.log  (log tampering)
+```
+
+Then drop in `sample-logs/normal-activity.log` — it comes back clean.
 
 ## Features
 
-- Paste logs or drag and drop `.log` / `.txt` files directly onto the dashboard
-- Upload multiple files at once and analyze them individually or all together as one combined analysis
-- Every detected threat is tagged with a MITRE ATT&CK tactic (Credential Access, Lateral Movement, Exfiltration, etc.)
-- Risk score from 0 to 100 so you can see overall severity at a glance
-- Expandable threat cards with the exact evidence lines pulled from your logs
-- Export the full report as a PDF or JSON
+- Drag and drop `.log` / `.txt` files or paste logs directly
+- Multi-file support — analyze files individually or combine them into one analysis
+- MITRE ATT&CK tactic mapping on every finding
+- Expandable threat cards with raw evidence lines
+- "What Happens Next" panel — 3 predicted next attacker moves with likelihood bars, watch indicators, and countermeasures
+- Export full report as PDF or JSON
+- Dark SOC-style dashboard UI
+
+## How it works
+
+```
+User drops log file
+       ↓
+FastAPI backend receives log_text
+       ↓
+Claude Opus 4.6 (extended thinking, 5k token budget)
+  - Reads full log timeline in context
+  - Identifies anomalies, maps to MITRE ATT&CK
+  - Predicts next 3 attacker moves via kill chain progression
+  - Returns structured JSON enforced by output schema
+       ↓
+Frontend renders risk gauge, anomaly cards, prediction panel
+```
+
+The Claude call uses `output_config` with a strict JSON schema so the response is always structured — no parsing heuristics, no prompt-engineered delimiters.
 
 ## Tech stack
 
-- React + TypeScript + Vite on the frontend
-- Python + FastAPI on the backend
-- Claude Opus 4.6 via the Anthropic API for the actual analysis
-- Adaptive thinking enabled so Claude reasons through the log timeline before responding, not just pattern matching
-- jsPDF for the report export
+| Layer | Technology |
+|---|---|
+| Frontend | React + TypeScript + Vite |
+| Backend | Python + FastAPI |
+| AI | Claude Opus 4.6 (Anthropic API) |
+| PDF export | jsPDF |
+| Hosting | Vercel (frontend) + Render (backend) |
 
-## Running it locally
+## Running locally
 
-You'll need Python 3.10+, Node.js 18+, and an Anthropic API key from [console.anthropic.com](https://console.anthropic.com).
+You need Python 3.10+, Node 18+, and an [Anthropic API key](https://console.anthropic.com).
 
-**Backend:**
+**Backend**
 ```bash
 cd backend
-cp .env.example .env
-# paste your Anthropic API key into .env
 pip install -r requirements.txt
-python -m uvicorn main:app --reload
+echo "ANTHROPIC_API_KEY=your_key_here" > .env
+uvicorn main:app --reload
 ```
 
-**Frontend:**
+**Frontend**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Then open `http://localhost:5173`.
+Open `http://localhost:5173`.
 
-## What it can detect
+## Detection coverage
 
-- Brute force and credential stuffing attacks
-- Privilege escalation via sudo, su, or wheel group changes
-- Lateral movement through SSH pivoting between internal hosts
-- Persistence mechanisms like cron jobs in temp directories or SSH key injection
-- Data exfiltration (shadow file reads, base64 encoding, suspicious outbound POST requests)
-- Command and control beacon patterns
-- Defense evasion like log file deletion or tampering
-- Off-hours logins and impossible travel (same user, multiple source IPs at once)
-- Suspicious command execution like downloading and chmod-ing files from unknown IPs
+| Category | Examples |
+|---|---|
+| Credential attacks | Brute force, credential stuffing, password spray |
+| Privilege escalation | sudo/su abuse, wheel group changes |
+| Lateral movement | SSH pivoting, unusual internal connections |
+| Persistence | Cron in /tmp, SSH key injection, service installs |
+| Exfiltration | /etc/shadow reads, base64 encoding, suspicious outbound POST |
+| C2 indicators | Periodic beaconing, unusual destination ports |
+| Defense evasion | Log deletion, auth.log tampering |
+| Anomalous access | Off-hours logins, impossible travel (same user, multiple IPs) |
+| Execution | wget/curl to temp dirs, chmod+x on downloaded files |
 
 ## Project structure
 
 ```
-log-anomaly-detector/
+sentinel/
 ├── backend/
-│   ├── main.py          # FastAPI app and routing
-│   ├── analyzer.py      # Claude API call + JSON schema enforcement
+│   ├── main.py        # FastAPI app, CORS, /analyze endpoint
+│   ├── analyzer.py    # Claude API call, combined schema, structured output
 │   └── requirements.txt
 ├── frontend/
 │   └── src/
-│       ├── App.tsx      # Dashboard UI
-│       └── types.ts     # TypeScript types
+│       ├── App.tsx    # Full dashboard, drag-drop, export, prediction panel
+│       ├── App.css    # Dark SOC theme
+│       └── types.ts   # TypeScript types
 └── sample-logs/
-    ├── attack-chain.log    # Full intrusion scenario to test with
-    └── normal-activity.log # Clean baseline logs
+    ├── attack-chain.log    # Full intrusion scenario
+    └── normal-activity.log # Clean baseline
 ```
