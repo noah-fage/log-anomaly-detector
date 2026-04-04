@@ -370,8 +370,6 @@ export default function App() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeResultId, setActiveResultId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [predictions, setPredictions] = useState<Record<string, PredictionResult>>({});
-  const [predLoadingIds, setPredLoadingIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── File helpers ──
@@ -402,7 +400,6 @@ export default function App() {
     });
     setResults(prev => { const r = { ...prev }; delete r[id]; return r; });
     setErrors(prev => { const r = { ...prev }; delete r[id]; return r; });
-    setPredictions(prev => { const r = { ...prev }; delete r[id]; return r; });
     if (activeResultId === id) setActiveResultId(null);
   };
 
@@ -434,32 +431,10 @@ export default function App() {
       const data: AnalysisResult = await res.json();
       setResults(prev => ({ ...prev, [id]: data }));
       setActiveResultId(id);
-      if (data.anomalies.length > 0) {
-        predictNextMoves(id, data.anomalies);
-      }
     } catch (err) {
       setErrors(prev => ({ ...prev, [id]: err instanceof Error ? err.message : "Unknown error" }));
     } finally {
       setLoadingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
-    }
-  };
-
-  const predictNextMoves = async (id: string, anomalies: AnalysisResult["anomalies"]) => {
-    if (anomalies.length === 0) return;
-    setPredLoadingIds(prev => new Set(prev).add(id));
-    try {
-      const res = await fetch("https://log-anomaly-detector.onrender.com/predict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ anomalies }),
-      });
-      if (!res.ok) return;
-      const data: PredictionResult = await res.json();
-      setPredictions(prev => ({ ...prev, [id]: data }));
-    } catch {
-      // silently fail — prediction is a bonus feature
-    } finally {
-      setPredLoadingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
     }
   };
 
@@ -486,8 +461,8 @@ export default function App() {
   const isLoadingAll = loadingIds.has(COMBINED_ID);
 
   const activeResult = activeResultId ? results[activeResultId] : null;
-  const activePrediction = activeResultId ? predictions[activeResultId] ?? null : null;
-  const isPredLoading = activeResultId ? predLoadingIds.has(activeResultId) : false;
+  const activePrediction = activeResult?.prediction ?? null;
+  const isPredLoading = activeResultId ? loadingIds.has(activeResultId) : isLoadingCurrent;
   const activeResultLabel =
     activeResultId === COMBINED_ID ? "All Files" :
     activeResultId === "manual" ? "Manual Input" :
