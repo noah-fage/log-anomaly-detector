@@ -8,7 +8,7 @@
 
 ---
 
-<!-- Replace this line with your demo GIF once recorded -->
+https://github.com/user-attachments/assets/ce0dc17a-95e7-4c65-8c15-e1d12a0bb73c
 > **Demo:** Drop in a log file at [sentinel-anomaly.vercel.app](https://sentinel-anomaly.vercel.app). Try the "Load Sample Attack Chain" button to see a full intrusion sequence analyzed end to end.
 
 ---
