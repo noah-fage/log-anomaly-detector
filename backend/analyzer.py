@@ -126,7 +126,7 @@ async def predict_next_moves(anomalies: list, api_key: str) -> dict:
 
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-opus-4-6",
             max_tokens=2000,
             system=PREDICTION_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Based on these anomalies, predict the attacker's next 3 moves:\n\n{anomaly_summary}"}],
