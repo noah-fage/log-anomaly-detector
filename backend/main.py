@@ -54,5 +54,8 @@ async def predict(request: PredictRequest):
     if not api_key:
         raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
 
-    result = await predict_next_moves(request.anomalies, api_key)
+    try:
+        result = await predict_next_moves(request.anomalies, api_key)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     return result

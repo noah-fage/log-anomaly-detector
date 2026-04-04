@@ -106,8 +106,6 @@ PREDICTION_OUTPUT_SCHEMA = {
         },
         "predictions": {
             "type": "array",
-            "minItems": 3,
-            "maxItems": 3,
             "items": {
                 "type": "object",
                 "properties": {
@@ -143,28 +141,31 @@ async def predict_next_moves(anomalies: list, api_key: str) -> dict:
         "time_window": a.get("time_window"),
     } for a in anomalies], indent=2)
 
-    response = client.messages.create(
-        model="claude-opus-4-6",
-        max_tokens=4096,
-        thinking={"type": "adaptive"},
-        system=PREDICTION_SYSTEM_PROMPT,
-        messages=[
-            {
-                "role": "user",
-                "content": f"Based on these detected security anomalies, predict the attacker's next 3 most likely moves:\n\n{anomaly_summary}"
+    try:
+        response = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=4096,
+            thinking={"type": "adaptive"},
+            system=PREDICTION_SYSTEM_PROMPT,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Based on these detected security anomalies, predict the attacker's next 3 most likely moves:\n\n{anomaly_summary}"
+                }
+            ],
+            output_config={
+                "format": {
+                    "type": "json_schema",
+                    "schema": PREDICTION_OUTPUT_SCHEMA
+                }
             }
-        ],
-        output_config={
-            "format": {
-                "type": "json_schema",
-                "schema": PREDICTION_OUTPUT_SCHEMA
-            }
-        }
-    )
+        )
 
-    for block in response.content:
-        if block.type == "text":
-            return json.loads(block.text)
+        for block in response.content:
+            if block.type == "text":
+                return json.loads(block.text)
+    except Exception as e:
+        raise RuntimeError(f"Prediction failed: {e}") from e
 
     return {"current_stage": "Unknown", "attacker_objective": "Unable to generate prediction.", "predictions": []}
 
