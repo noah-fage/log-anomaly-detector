@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
 
-from analyzer import analyze_logs
+from analyzer import analyze_logs, predict_next_moves
 
 load_dotenv()
 
@@ -23,6 +23,10 @@ class AnalyzeRequest(BaseModel):
     log_text: str
 
 
+class PredictRequest(BaseModel):
+    anomalies: list
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -38,4 +42,20 @@ async def analyze(request: AnalyzeRequest):
         raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
 
     result = await analyze_logs(request.log_text, api_key)
+    return result
+
+
+@app.post("/predict")
+async def predict(request: PredictRequest):
+    if not request.anomalies:
+        raise HTTPException(status_code=400, detail="anomalies cannot be empty")
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
+
+    try:
+        result = await predict_next_moves(request.anomalies, api_key)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     return result

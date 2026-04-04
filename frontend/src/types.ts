@@ -15,7 +15,6 @@ export interface AnalysisResult {
   summary: string;
   risk_score: number;
   anomalies: Anomaly[];
-  prediction?: PredictionResult;
 }
 
 export interface PredictionStep {
