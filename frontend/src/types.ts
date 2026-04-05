@@ -16,3 +16,20 @@ export interface AnalysisResult {
   risk_score: number;
   anomalies: Anomaly[];
 }
+
+export interface PredictionStep {
+  step: number;
+  tactic: string;
+  technique: string;
+  technique_id: string;
+  likelihood: number;
+  description: string;
+  indicators: string[];
+  defense: string;
+}
+
+export interface PredictionResult {
+  current_stage: string;
+  attacker_objective: string;
+  predictions: PredictionStep[];
+}

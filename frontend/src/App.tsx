@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import jsPDF from "jspdf";
-import type { AnalysisResult, Severity } from "./types";
+import type { AnalysisResult, Severity, PredictionResult, PredictionStep } from "./types";
 import "./App.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -267,6 +267,98 @@ function AnomalyCard({ anomaly }: { anomaly: import("./types").Anomaly }) {
   );
 }
 
+// ── Attacker Prediction ────────────────────────────────────────────────────
+
+function LikelihoodBar({ value }: { value: number }) {
+  const color = value >= 75 ? "#ff4d4d" : value >= 50 ? "#ff8c00" : "#ffd700";
+  return (
+    <div className="likelihood-bar-track">
+      <div className="likelihood-bar-fill" style={{ width: `${value}%`, background: color }} />
+      <span className="likelihood-pct" style={{ color }}>{value}%</span>
+    </div>
+  );
+}
+
+function PredictionCard({ pred, index }: { pred: PredictionStep; index: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const color = pred.likelihood >= 75 ? "#ff4d4d" : pred.likelihood >= 50 ? "#ff8c00" : "#ffd700";
+  return (
+    <div className="prediction-card" style={{ borderLeft: `3px solid ${color}` }}>
+      <div className="prediction-card-header" onClick={() => setExpanded(!expanded)}>
+        <div className="pred-step-num" style={{ color, borderColor: color }}>{index + 1}</div>
+        <div className="pred-header-body">
+          <div className="pred-title-row">
+            <span className="pred-technique">{pred.technique}</span>
+            <span className="pred-id">{pred.technique_id}</span>
+            <span className="pred-tactic">{pred.tactic}</span>
+          </div>
+          <LikelihoodBar value={pred.likelihood} />
+        </div>
+        <span className="expand-icon">{expanded ? "▲" : "▼"}</span>
+      </div>
+      {expanded && (
+        <div className="prediction-card-body">
+          <p className="pred-description">{pred.description}</p>
+          <div className="pred-section">
+            <span className="pred-section-label">WATCH FOR</span>
+            {pred.indicators.map((ind, i) => (
+              <code key={i} className="pred-indicator">{ind}</code>
+            ))}
+          </div>
+          <div className="pred-section">
+            <span className="pred-section-label">COUNTERMEASURE</span>
+            <p className="pred-defense">{pred.defense}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AttackerPrediction({ prediction, loading }: { prediction: PredictionResult | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="prediction-panel">
+        <div className="prediction-header">
+          <span className="pred-skull">☠</span>
+          <span className="pred-panel-title">WHAT HAPPENS NEXT</span>
+          <span className="pred-panel-sub">AI Attacker Prediction</span>
+        </div>
+        <div className="prediction-loading">
+          <span className="spinner pred-spinner" />
+          <span>Modeling attacker behavior via MITRE ATT&amp;CK...</span>
+        </div>
+      </div>
+    );
+  }
+  if (!prediction) return null;
+  return (
+    <div className="prediction-panel">
+      <div className="prediction-header">
+        <span className="pred-skull">☠</span>
+        <span className="pred-panel-title">WHAT HAPPENS NEXT</span>
+        <span className="pred-panel-sub">AI Attacker Prediction · Powered by MITRE ATT&amp;CK</span>
+      </div>
+      <div className="prediction-meta">
+        <div className="pred-meta-row">
+          <span className="pred-meta-label">CURRENT STAGE</span>
+          <span className="pred-current-stage">{prediction.current_stage}</span>
+        </div>
+        <div className="pred-meta-row">
+          <span className="pred-meta-label">ATTACKER OBJECTIVE</span>
+          <p className="pred-objective">{prediction.attacker_objective}</p>
+        </div>
+      </div>
+      <div className="prediction-list-header">PREDICTED NEXT MOVES</div>
+      <div className="prediction-list">
+        {prediction.predictions.map((p, i) => (
+          <PredictionCard key={i} pred={p} index={i} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ───────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -278,6 +370,8 @@ export default function App() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeResultId, setActiveResultId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [predictions, setPredictions] = useState<Record<string, PredictionResult>>({});
+  const [predLoadingIds, setPredLoadingIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── File helpers ──
@@ -308,6 +402,7 @@ export default function App() {
     });
     setResults(prev => { const r = { ...prev }; delete r[id]; return r; });
     setErrors(prev => { const r = { ...prev }; delete r[id]; return r; });
+    setPredictions(prev => { const r = { ...prev }; delete r[id]; return r; });
     if (activeResultId === id) setActiveResultId(null);
   };
 
@@ -339,10 +434,32 @@ export default function App() {
       const data: AnalysisResult = await res.json();
       setResults(prev => ({ ...prev, [id]: data }));
       setActiveResultId(id);
+      if (data.anomalies.length > 0) {
+        predictNextMoves(id, data.anomalies);
+      }
     } catch (err) {
       setErrors(prev => ({ ...prev, [id]: err instanceof Error ? err.message : "Unknown error" }));
     } finally {
       setLoadingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    }
+  };
+
+  const predictNextMoves = async (id: string, anomalies: AnalysisResult["anomalies"]) => {
+    if (anomalies.length === 0) return;
+    setPredLoadingIds(prev => new Set(prev).add(id));
+    try {
+      const res = await fetch("https://log-anomaly-detector.onrender.com/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ anomalies }),
+      });
+      if (!res.ok) return;
+      const data: PredictionResult = await res.json();
+      setPredictions(prev => ({ ...prev, [id]: data }));
+    } catch {
+      // silently fail — prediction is a bonus feature
+    } finally {
+      setPredLoadingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
     }
   };
 
@@ -369,6 +486,8 @@ export default function App() {
   const isLoadingAll = loadingIds.has(COMBINED_ID);
 
   const activeResult = activeResultId ? results[activeResultId] : null;
+  const activePrediction = activeResultId ? predictions[activeResultId] ?? null : null;
+  const isPredLoading = activeResultId ? predLoadingIds.has(activeResultId) : false;
   const activeResultLabel =
     activeResultId === COMBINED_ID ? "All Files" :
     activeResultId === "manual" ? "Manual Input" :
@@ -542,6 +661,10 @@ export default function App() {
                 </div>
                 {sortedAnomalies.map((anomaly, i) => <AnomalyCard key={i} anomaly={anomaly} />)}
               </div>
+            )}
+
+            {(isPredLoading || activePrediction) && (
+              <AttackerPrediction prediction={activePrediction} loading={isPredLoading} />
             )}
           </div>
         )}

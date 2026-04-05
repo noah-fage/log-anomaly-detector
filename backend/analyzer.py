@@ -1,4 +1,5 @@
 import anthropic
+import json
 from pydantic import BaseModel
 from typing import Literal
 
@@ -70,6 +71,104 @@ OUTPUT_SCHEMA = {
 }
 
 
+PREDICTION_SYSTEM_PROMPT = """You are a threat intelligence analyst specializing in attacker behavior modeling and the MITRE ATT&CK framework.
+
+Given a set of detected security anomalies from a log analysis, predict what the attacker is most likely to do next based on their observed TTPs and the logical kill chain progression.
+
+Use your knowledge of:
+- MITRE ATT&CK tactic chaining and technique dependencies
+- Common APT playbooks, ransomware operator patterns, and commodity malware behavior
+- What capabilities the attacker has already established (access, persistence, tools)
+- Historical attack progression data and red team exercise outcomes
+
+For each of the 3 predicted next moves, provide:
+- step: 1, 2, or 3 (ordered most-likely first)
+- tactic: MITRE ATT&CK tactic name
+- technique: specific technique name
+- technique_id: MITRE ATT&CK technique ID (e.g. T1078, T1059.001)
+- likelihood: integer 0-100 indicating probability this is the next move
+- description: 2-3 sentences explaining WHY the attacker would do this and how it follows from current activity
+- indicators: array of 2-3 specific log/network indicators to watch for right now
+- defense: one specific, immediately actionable countermeasure
+
+Return ONLY valid JSON. No markdown fences, no explanation outside the JSON."""
+
+PREDICTION_OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "current_stage": {
+            "type": "string",
+            "description": "The current MITRE ATT&CK stage the attacker is in based on detected activity"
+        },
+        "attacker_objective": {
+            "type": "string",
+            "description": "1-2 sentence assessment of the attacker's likely end goal given the TTPs observed"
+        },
+        "predictions": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "step": {"type": "integer"},
+                    "tactic": {"type": "string"},
+                    "technique": {"type": "string"},
+                    "technique_id": {"type": "string"},
+                    "likelihood": {"type": "integer"},
+                    "description": {"type": "string"},
+                    "indicators": {"type": "array", "items": {"type": "string"}},
+                    "defense": {"type": "string"}
+                },
+                "required": ["step", "tactic", "technique", "technique_id", "likelihood", "description", "indicators", "defense"],
+                "additionalProperties": False
+            }
+        }
+    },
+    "required": ["current_stage", "attacker_objective", "predictions"],
+    "additionalProperties": False
+}
+
+
+async def predict_next_moves(anomalies: list, api_key: str) -> dict:
+    client = anthropic.Anthropic(api_key=api_key)
+
+    anomaly_summary = json.dumps([{
+        "title": a.get("title"),
+        "severity": a.get("severity"),
+        "tactic": a.get("tactic"),
+        "description": a.get("description"),
+        "source_ip": a.get("source_ip"),
+        "affected_user": a.get("affected_user"),
+        "time_window": a.get("time_window"),
+    } for a in anomalies], indent=2)
+
+    response = client.messages.create(
+        model="claude-opus-4-6",
+        max_tokens=4096,
+        thinking={"type": "adaptive"},
+        system=PREDICTION_SYSTEM_PROMPT,
+        messages=[
+            {
+                "role": "user",
+                "content": f"Based on these detected security anomalies, predict the attacker's next 3 most likely moves:\n\n{anomaly_summary}"
+            }
+        ],
+        output_config={
+            "format": {
+                "type": "json_schema",
+                "schema": PREDICTION_OUTPUT_SCHEMA
+            }
+        }
+    )
+
+    for block in response.content:
+        if block.type == "text":
+            return json.loads(block.text)
+
+    return {"current_stage": "Unknown", "attacker_objective": "Unable to generate prediction.", "predictions": []}
+
+
 async def analyze_logs(log_text: str, api_key: str) -> dict:
     client = anthropic.Anthropic(api_key=api_key)
 
@@ -92,7 +191,6 @@ async def analyze_logs(log_text: str, api_key: str) -> dict:
         }
     )
 
-    import json
     for block in response.content:
         if block.type == "text":
             return json.loads(block.text)

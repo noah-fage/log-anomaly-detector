@@ -289,3 +289,245 @@ body {
   background: #0a0a15; border: 1px solid #1a1a2e; border-radius: 3px;
   padding: 5px 10px; white-space: pre-wrap; word-break: break-all;
 }
+
+/* ── Attacker Prediction Panel ── */
+.prediction-panel {
+  border: 1px solid #3d1a1a;
+  border-top: 2px solid #ff4d4d55;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 16px 20px 20px;
+  background: #0d0808;
+  animation: fadeInUp 0.4s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.prediction-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #1a0808 0%, #0f0a14 100%);
+  border-bottom: 1px solid #2d1010;
+}
+.pred-skull {
+  font-size: 20px;
+  filter: drop-shadow(0 0 6px #ff4d4d88);
+}
+.pred-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: monospace;
+  letter-spacing: 3px;
+  color: #ff4d4d;
+  text-shadow: 0 0 12px #ff4d4d66;
+}
+.pred-panel-sub {
+  font-size: 10px;
+  font-family: monospace;
+  color: #664444;
+  margin-left: auto;
+  letter-spacing: 1px;
+}
+
+.prediction-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 20px;
+  color: #884444;
+  font-size: 13px;
+  font-family: monospace;
+}
+.pred-spinner {
+  border-color: #ff4d4d33;
+  border-top-color: #ff4d4d;
+}
+
+.prediction-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #2d1010;
+  background: #0f0909;
+}
+.pred-meta-row { display: flex; flex-direction: column; gap: 4px; }
+.pred-meta-label {
+  font-size: 9px;
+  font-family: monospace;
+  letter-spacing: 2px;
+  color: #663333;
+}
+.pred-current-stage {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: monospace;
+  color: #ff8c00;
+  letter-spacing: 1px;
+}
+.pred-objective {
+  font-size: 13px;
+  color: #a08080;
+  line-height: 1.6;
+}
+
+.prediction-list-header {
+  padding: 10px 20px 6px;
+  font-size: 10px;
+  font-family: monospace;
+  letter-spacing: 2px;
+  color: #664444;
+  background: #0d0808;
+}
+
+.prediction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 20px 16px;
+}
+
+.prediction-card {
+  background: #0f0a0a;
+  border: 1px solid #2d1515;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.prediction-card:hover { border-color: #ff4d4d33; }
+
+.prediction-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+.prediction-card-header:hover { filter: brightness(1.15); }
+
+.pred-step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: monospace;
+  flex-shrink: 0;
+  background: #0a0505;
+}
+
+.pred-header-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pred-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pred-technique {
+  font-size: 13px;
+  font-weight: 600;
+  color: #d0b8b8;
+}
+.pred-id {
+  font-size: 10px;
+  font-family: monospace;
+  background: #1a0d0d;
+  border: 1px solid #3d1a1a;
+  border-radius: 3px;
+  padding: 1px 7px;
+  color: #996666;
+  letter-spacing: 0.5px;
+}
+.pred-tactic {
+  font-size: 10px;
+  color: #664444;
+  font-family: monospace;
+  margin-left: auto;
+}
+
+.likelihood-bar-track {
+  position: relative;
+  height: 6px;
+  background: #1a0d0d;
+  border-radius: 3px;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+}
+.likelihood-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s ease;
+  box-shadow: 0 0 8px currentColor;
+}
+.likelihood-pct {
+  font-size: 10px;
+  font-family: monospace;
+  font-weight: 700;
+  margin-left: 8px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.prediction-card-body {
+  padding: 0 16px 14px;
+  border-top: 1px solid #2d101040;
+}
+.pred-description {
+  font-size: 13px;
+  color: #907070;
+  line-height: 1.6;
+  margin: 12px 0 10px;
+}
+
+.pred-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+.pred-section-label {
+  font-size: 9px;
+  font-family: monospace;
+  letter-spacing: 2px;
+  color: #553333;
+  margin-bottom: 2px;
+}
+.pred-indicator {
+  display: block;
+  font-family: "Cascadia Code", "Fira Code", "Courier New", monospace;
+  font-size: 11px;
+  color: #886666;
+  background: #0a0505;
+  border: 1px solid #2d1010;
+  border-radius: 3px;
+  padding: 4px 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.pred-defense {
+  font-size: 12px;
+  color: #80a890;
+  line-height: 1.6;
+  background: #060d09;
+  border: 1px solid #0d2018;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
